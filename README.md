@@ -25,6 +25,14 @@ No live external data feed is required. If a data integration is added later, it
 must be sourced, timestamped, and clearly distinguished from illustrative values.
 Run the model checks with `python -m pytest`.
 
+## Host on Render
+
+The repository includes a Render Blueprint in `render.yaml`. In the Render
+dashboard, choose **New → Blueprint**, connect the GitHub repository, and
+deploy the `aor-maritime-resilience` free web service. Render will install
+`requirements.txt` and start Streamlit on the port assigned to the service.
+Free services can sleep when idle and may take about a minute to wake up.
+
 ## Host on Streamlit Community Cloud
 
 The app is prepared for Streamlit Community Cloud. Push the project source,
