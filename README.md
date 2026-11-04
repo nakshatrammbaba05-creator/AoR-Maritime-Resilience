@@ -28,10 +28,13 @@ Run the model checks with `python -m pytest`.
 ## Host on Render
 
 The repository includes a Render Blueprint in `render.yaml`. In the Render
-dashboard, choose **New → Blueprint**, connect the GitHub repository, and
-deploy the `aor-maritime-resilience` free web service. Render will install
+dashboard, choose **New → Blueprint**, enter the public GitHub repository URL,
+and deploy the `aor-maritime-resilience` free web service. Render will install
 `requirements.txt` and start Streamlit on the port assigned to the service.
-Free services can sleep when idle and may take about a minute to wake up.
+Because the repository is imported by public URL, configure the GitHub
+integration in Render if you want automatic deploys on future pushes; otherwise
+deploy updates manually. Free services can sleep when idle and may take about a
+minute to wake up.
 
 ## Host on Streamlit Community Cloud
 
