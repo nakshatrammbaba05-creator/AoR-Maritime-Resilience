@@ -1,7 +1,7 @@
 # Optimizing Maritime Cargo Routes for Resilience under Strategic Chokepoint Disruptions
 
 **Authors:** Arpita Gupta (MBA/11/034); Kriti Kabra (MBA/11/116); Nakshatra Mehta (MBA/BA05/056); Swapnil Chourasiya (MBA/11/240)<br>
-**Course:** Analysis of Risk (AoR)<br>
+**Course:** Advanced Operations Research (AoR)<br>
 **Research paper:** Rokaya Lassoued, “Chokepoint-aware maritime logistics reconfiguration under security disruptions: a scenario-based mixed-integer optimization framework,” *Journal of Transportation Security*, 19, 35 (2026). [https://doi.org/10.1007/s12198-026-00357-8](https://doi.org/10.1007/s12198-026-00357-8)<br>
 **Prototype:** [Render app](https://aor-maritime-resilience.onrender.com/)
 
