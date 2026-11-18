@@ -13,6 +13,14 @@ PROJECT_TITLE = (
     "Strategic Chokepoint Disruptions"
 )
 
+
+def right_aligned_heading(text: str) -> None:
+    st.markdown(
+        f'<h4 style="text-align: right;">{text}</h4>',
+        unsafe_allow_html=True,
+    )
+
+
 st.set_page_config(
     page_title="Maritime Resilience Simulator",
     page_icon="🚢",
@@ -193,7 +201,7 @@ with right:
     cost_chart.update_layout(yaxis_title=None, xaxis_title="Cost")
     st.plotly_chart(cost_chart, width="stretch")
 
-st.markdown("#### Optimized plan vs. passive nominal plan")
+right_aligned_heading("Optimized plan vs. passive nominal plan")
 comparison_frame = pd.DataFrame(
     [
         {
@@ -214,7 +222,21 @@ comparison_frame = pd.DataFrame(
         },
     ]
 )
-st.dataframe(comparison_frame, hide_index=True, width="stretch")
+st.dataframe(
+    comparison_frame,
+    hide_index=True,
+    width="stretch",
+    column_config={
+        "Policy": st.column_config.TextColumn("Policy", alignment="left"),
+        "Shortage": st.column_config.NumberColumn("Shortage", format="%.1f", alignment="right"),
+        "Risk budget used (%)": st.column_config.NumberColumn(
+            "Risk budget used (%)", format="%.1f%%", alignment="right"
+        ),
+        "Total cost": st.column_config.NumberColumn(
+            "Total cost", format="%.1f", alignment="right"
+        ),
+    },
+)
 if selected_nominal.risk_exposure > selected_nominal.risk_budget + 1e-6:
     st.info(
         "The passive plan exceeds the selected scenario's risk budget. "
@@ -222,16 +244,20 @@ if selected_nominal.risk_exposure > selected_nominal.risk_budget + 1e-6:
         "show the consequence of keeping the nominal route."
     )
 
-st.markdown("#### Scenario comparison")
+right_aligned_heading("Scenario comparison")
 scenario_rows = []
 expected_cost = 0.0
 for scenario in SCENARIOS:
     optimized, _ = scenario_results[scenario.id]
+    scenario_data = build_scenario_data(
+        scenario.id,
+        demand_multiplier=demand_multiplier,
+        direct_capacity_multiplier=direct_capacity_multiplier,
+        risk_budget_multiplier=risk_budget_multiplier,
+        inventory_multiplier=inventory_multiplier,
+    )
     demand_for_scenario = sum(
-        demand.quantity
-        for demand in build_scenario_data(
-            scenario.id, demand_multiplier=demand_multiplier
-        ).demands
+        demand.quantity for demand in scenario_data.demands
     )
     scenario_rows.append(
         {
@@ -273,11 +299,38 @@ st.dataframe(
     ),
     hide_index=True,
     width="stretch",
+    column_config={
+        "Scenario": st.column_config.TextColumn("Scenario", alignment="left"),
+        "Weight": st.column_config.NumberColumn(
+            "Weight", format="percent", alignment="right"
+        ),
+        "Total cost": st.column_config.NumberColumn(
+            "Total cost", format="%.1f", alignment="right"
+        ),
+        "Shortage": st.column_config.NumberColumn(
+            "Shortage", format="%.1f", alignment="right"
+        ),
+        "Inventory used": st.column_config.NumberColumn(
+            "Inventory used", format="%.1f", alignment="right"
+        ),
+        "Delay exposure": st.column_config.NumberColumn(
+            "Delay exposure", format="%.1f", alignment="right"
+        ),
+        "Risk budget used (%)": st.column_config.NumberColumn(
+            "Risk budget used (%)", format="%.1f%%", alignment="right"
+        ),
+        "Emissions index": st.column_config.NumberColumn(
+            "Emissions index", format="%.1f", alignment="right"
+        ),
+        "Rerouted (%)": st.column_config.NumberColumn(
+            "Rerouted (%)", format="%.1f%%", alignment="right"
+        ),
+    },
 )
 st.metric("Scenario-weighted expected cost", f"{expected_cost:,.1f} illustrative units")
 
 with st.expander("Inspect model inputs, decisions, and assumptions"):
-    st.markdown("#### Cargo inputs")
+    right_aligned_heading("Cargo inputs")
     cargo_input_rows = [
         {
             "Cargo": demand.label,
@@ -299,7 +352,7 @@ with st.expander("Inspect model inputs, decisions, and assumptions"):
         width="stretch",
     )
 
-    st.markdown("#### Route inputs")
+    right_aligned_heading("Route inputs")
     route_input_rows = [
         {
             "Route option": route.label,
@@ -335,27 +388,67 @@ with st.expander("Inspect model inputs, decisions, and assumptions"):
         + f". Risk budget: {selected_data.scenario.risk_budget:,.1f} index units."
     )
 
-    st.markdown("#### Optimized demand-level decisions")
-    decision_rows = []
-    for demand in selected_data.demands:
-        decision = {
-            "Cargo": demand.label,
-            "Demand": demand.quantity,
-            "Emergency inventory": selected_result.inventory[demand.id],
-            "Unmet demand": selected_result.shortage[demand.id],
-        }
-        for route in selected_data.routes:
-            decision[route.label] = selected_result.route_flows.get(
-                (demand.id, route.id), 0.0
-            )
-        decision_rows.append(decision)
+    right_aligned_heading("Optimized demand-level decisions")
+    scenario_decision_frames: dict[str, pd.DataFrame] = {}
+    for scenario in SCENARIOS:
+        optimized, _ = scenario_results[scenario.id]
+        scenario_data = build_scenario_data(
+            scenario.id,
+            demand_multiplier=demand_multiplier,
+            direct_capacity_multiplier=direct_capacity_multiplier,
+            risk_budget_multiplier=risk_budget_multiplier,
+            inventory_multiplier=inventory_multiplier,
+        )
+        decision_rows = []
+        for demand in scenario_data.demands:
+            decision = {
+                "Cargo": demand.label,
+                "Demand": demand.quantity,
+                "Emergency inventory": optimized.inventory[demand.id],
+                "Unmet demand": optimized.shortage[demand.id],
+            }
+            for route in scenario_data.routes:
+                decision[route.label] = optimized.route_flows.get(
+                    (demand.id, route.id), 0.0
+                )
+            decision_rows.append(decision)
+        scenario_decision_frames[scenario.id] = pd.DataFrame(decision_rows)
+
+    decision_frame = scenario_decision_frames[selected_scenario_id]
+    decision_column_config = {
+        "Cargo": st.column_config.TextColumn("Cargo", alignment="left"),
+        **{
+            column: st.column_config.NumberColumn(column, alignment="right")
+            for column in decision_frame.columns[1:]
+        },
+    }
+    st.caption(f"Scenario: {selected_result.scenario_label}")
     st.dataframe(
-        pd.DataFrame(decision_rows).style.format(
-            {column: "{:,.1f}" for column in pd.DataFrame(decision_rows).columns[1:]}
+        decision_frame.style.format(
+            {column: "{:,.1f}" for column in decision_frame.columns[1:]}
         ),
         hide_index=True,
         width="stretch",
+        column_config=decision_column_config,
     )
+
+    right_aligned_heading("Comparison table")
+    comparison_columns = st.columns(len(SCENARIOS))
+    for scenario, column in zip(SCENARIOS, comparison_columns):
+        with column:
+            st.markdown(f"##### {scenario.label}")
+            scenario_decision_frame = scenario_decision_frames[scenario.id]
+            st.dataframe(
+                scenario_decision_frame.style.format(
+                    {
+                        field: "{:,.1f}"
+                        for field in scenario_decision_frame.columns[1:]
+                    }
+                ),
+                hide_index=True,
+                width="stretch",
+                column_config=decision_column_config,
+            )
     st.write(
         "Volumes, costs, risk intensities, capacities, delays, and emissions "
         "are illustrative indices created for this class prototype. Route "
